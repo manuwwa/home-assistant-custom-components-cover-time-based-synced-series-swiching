@@ -1,0 +1,10 @@
+{
+  "domain": "cover_time_based_synced",
+  "name": "Cover Time Based Synced",
+  "version": "1.0.8",
+  "documentation": "https://github.com/kotborealis/home-assistant-custom-components-cover-time-based-synced",
+  "requirements": [
+    "xknx==0.9.4"
+  ],
+  "codeowners": ["@kotborealis"]
+}

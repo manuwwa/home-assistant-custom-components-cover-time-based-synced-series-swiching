@@ -1,4 +1,4 @@
-"""Cover Time based, RF version."""
+"""Cover Time based, Synced version."""
 import logging
 
 import voluptuous as vol
@@ -36,9 +36,8 @@ CONF_SEND_STOP_AT_ENDS = 'send_stop_at_ends'
 DEFAULT_TRAVEL_TIME = 25
 DEFAULT_SEND_STOP_AT_ENDS = False
 
-CONF_OPEN_SCRIPT_ENTITY_ID = 'open_script_entity_id'
-CONF_CLOSE_SCRIPT_ENTITY_ID = 'close_script_entity_id'
-CONF_STOP_SCRIPT_ENTITY_ID = 'stop_script_entity_id'
+CONF_OPEN_SWITCH_ENTITY_ID = 'open_switch_entity_id'
+CONF_CLOSE_SWITCH_ENTITY_ID = 'close_switch_entity_id'
 ATTR_CONFIDENT = 'confident'
 ATTR_POSITION = 'position'
 ATTR_ACTION = 'action'
@@ -55,9 +54,8 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
             {
                 cv.string: {
                     vol.Required(CONF_NAME): cv.string,
-                    vol.Required(CONF_OPEN_SCRIPT_ENTITY_ID): cv.entity_id,
-                    vol.Required(CONF_CLOSE_SCRIPT_ENTITY_ID): cv.entity_id,
-                    vol.Required(CONF_STOP_SCRIPT_ENTITY_ID): cv.entity_id,
+                    vol.Required(CONF_OPEN_SWITCH_ENTITY_ID): cv.entity_id,
+                    vol.Required(CONF_CLOSE_SWITCH_ENTITY_ID): cv.entity_id,
                     vol.Optional(CONF_ALIASES, default=[]): vol.All(cv.ensure_list, [cv.string]),
                     vol.Optional(CONF_TRAVELLING_TIME_DOWN, default=DEFAULT_TRAVEL_TIME): cv.positive_int,
                     vol.Optional(CONF_TRAVELLING_TIME_UP, default=DEFAULT_TRAVEL_TIME): cv.positive_int,
@@ -86,7 +84,7 @@ ACTION_SCHEMA = vol.Schema(
 )
 
 
-DOMAIN = "cover_rf_time_based"
+DOMAIN = "cover_time_based_synced"
 
 def devices_from_config(domain_config):
     """Parse configuration and add cover devices."""
@@ -95,11 +93,10 @@ def devices_from_config(domain_config):
         name = config.pop(CONF_NAME)
         travel_time_down = config.pop(CONF_TRAVELLING_TIME_DOWN)
         travel_time_up = config.pop(CONF_TRAVELLING_TIME_UP)
-        open_script_entity_id = config.pop(CONF_OPEN_SCRIPT_ENTITY_ID)
-        close_script_entity_id = config.pop(CONF_CLOSE_SCRIPT_ENTITY_ID)
-        stop_script_entity_id = config.pop(CONF_STOP_SCRIPT_ENTITY_ID)
+        open_switch_entity_id = config.pop(CONF_OPEN_SWITCH_ENTITY_ID)
+        close_switch_entity_id = config.pop(CONF_CLOSE_SWITCH_ENTITY_ID)
         send_stop_at_ends = config.pop(CONF_SEND_STOP_AT_ENDS)
-        device = CoverTimeBased(device_id, name, travel_time_down, travel_time_up, open_script_entity_id, close_script_entity_id, stop_script_entity_id, send_stop_at_ends)
+        device = CoverTimeBased(device_id, name, travel_time_down, travel_time_up, open_switch_entity_id, close_switch_entity_id, send_stop_at_ends)
         devices.append(device)
     return devices
 
@@ -121,14 +118,13 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 
 
 class CoverTimeBased(CoverEntity, RestoreEntity):
-    def __init__(self, device_id, name, travel_time_down, travel_time_up, open_script_entity_id, close_script_entity_id, stop_script_entity_id, send_stop_at_ends):
+    def __init__(self, device_id, name, travel_time_down, travel_time_up, open_switch_entity_id, close_switch_entity_id, send_stop_at_ends):
         """Initialize the cover."""
         from xknx.devices import TravelCalculator
         self._travel_time_down = travel_time_down
         self._travel_time_up = travel_time_up
-        self._open_script_entity_id = open_script_entity_id
-        self._close_script_entity_id = close_script_entity_id 
-        self._stop_script_entity_id = stop_script_entity_id
+        self._open_switch_entity_id = open_switch_entity_id
+        self._close_switch_entity_id = close_switch_entity_id
         self._send_stop_at_ends = send_stop_at_ends
         self._assume_uncertain_position = True 
         self._target_position = 0
@@ -144,9 +140,38 @@ class CoverTimeBased(CoverEntity, RestoreEntity):
 
         self.tc = TravelCalculator(self._travel_time_down, self._travel_time_up)
 
+        self._switch_close_state = "off"
+        self._switch_open_state = "off"
+
+    async def _handle_state_changed(self, event):
+        if event.data.get("new_state").state != event.data.get("old_state").state:
+            if event.data.get("entity_id") == self._close_switch_entity_id:
+                self._switch_close_state = event.data.get("new_state").state
+            if event.data.get("entity_id") == self._open_switch_entity_id:
+                self._switch_open_state = event.data.get("new_state").state
+
+            if self._switch_open_state == "off" and self._switch_close_state == "off":
+                self._handle_my_button()
+            elif self._switch_open_state == "on" and self._switch_close_state == "on":
+                self._handle_my_button()
+                if event.data.get("entity_id") == self._close_switch_entity_id:
+                    await self.hass.services.async_call("homeassistant", "turn_off", {"entity_id": self._open_switch_entity_id}, False)
+                if event.data.get("entity_id") == self._open_switch_entity_id:
+                    await self.hass.services.async_call("homeassistant", "turn_off", {"entity_id": self._close_switch_entity_id}, False)
+            elif self._switch_open_state == "on" and self._switch_close_state == "off":
+                self.tc.start_travel_up()
+                self._target_position = 100
+                self.start_auto_updater()
+            elif self._switch_open_state == "off" and self._switch_close_state == "on":
+                self.tc.start_travel_down()
+                self._target_position = 0
+                self.start_auto_updater()
+            
+
     async def async_added_to_hass(self):
         """ Only cover position and confidence in that matters."""
         """ The rest is calculated from this attribute.        """
+        self.hass.bus.async_listen("state_changed", self._handle_state_changed)
         old_state = await self.async_get_last_state()
         _LOGGER.debug(self._name + ': ' + 'async_added_to_hass :: oldState %s', old_state)
         if (old_state is not None and self.tc is not None and old_state.attributes.get(ATTR_CURRENT_POSITION) is not None):
@@ -178,7 +203,7 @@ class CoverTimeBased(CoverEntity, RestoreEntity):
     @property
     def unique_id(self):
         """Return the unique id."""
-        return "cover_rf_timebased_uuid_" + self._unique_id
+        return "cover_timebased_synced_uuid_" + self._unique_id
 
     @property
     def device_state_attributes(self):
@@ -230,25 +255,16 @@ class CoverTimeBased(CoverEntity, RestoreEntity):
     async def async_close_cover(self, **kwargs):
         """Turn the device close."""
         _LOGGER.debug(self._name + ': ' + 'async_close_cover')
-        self.tc.start_travel_down()
-        self._target_position = 0
-
-        self.start_auto_updater()
         await self._async_handle_command(SERVICE_CLOSE_COVER)
 
     async def async_open_cover(self, **kwargs):
         """Turn the device open."""
         _LOGGER.debug(self._name + ': ' + 'async_open_cover')
-        self.tc.start_travel_up()
-        self._target_position = 100
-
-        self.start_auto_updater()
         await self._async_handle_command(SERVICE_OPEN_COVER)
 
     async def async_stop_cover(self, **kwargs):
         """Turn the device stop."""
         _LOGGER.debug(self._name + ': ' + 'async_stop_cover')
-        self._handle_my_button()
         await self._async_handle_command(SERVICE_STOP_COVER)
 
     async def set_position(self, position):
@@ -363,17 +379,20 @@ class CoverTimeBased(CoverEntity, RestoreEntity):
         if command == "close_cover":
             cmd = "DOWN"
             self._state = False
-            await self.hass.services.async_call("homeassistant", "turn_on", {"entity_id": self._close_script_entity_id}, False)
+            await self.hass.services.async_call("homeassistant", "turn_off", {"entity_id": self._open_switch_entity_id}, False)
+            await self.hass.services.async_call("homeassistant", "turn_on", {"entity_id": self._close_switch_entity_id}, False)
 
         elif command == "open_cover":
             cmd = "UP"
             self._state = True
-            await self.hass.services.async_call("homeassistant", "turn_on", {"entity_id": self._open_script_entity_id}, False)
+            await self.hass.services.async_call("homeassistant", "turn_off", {"entity_id": self._close_switch_entity_id}, False)
+            await self.hass.services.async_call("homeassistant", "turn_on", {"entity_id": self._open_switch_entity_id}, False)
 
         elif command == "stop_cover":
             cmd = "STOP"
             self._state = True
-            await self.hass.services.async_call("homeassistant", "turn_on", {"entity_id": self._stop_script_entity_id}, False)
+            await self.hass.services.async_call("homeassistant", "turn_off", {"entity_id": self._open_switch_entity_id}, False)
+            await self.hass.services.async_call("homeassistant", "turn_off", {"entity_id": self._close_switch_entity_id}, False)
 
         _LOGGER.debug(self._name + ': ' + '_async_handle_command :: %s', cmd)
 
