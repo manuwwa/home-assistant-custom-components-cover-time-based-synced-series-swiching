@@ -2,6 +2,9 @@
   "name": "Cover Time Based Synced",
   "content_in_root": false,
   "render_readme": false,
-  "domains": ["cover"],
-  "homeassistant": "0.110.0"
+  "hacs": "1.6.0",
+  "domains": [
+    "cover"
+  ],
+  "homeassistant": "0.118.0"
 }
