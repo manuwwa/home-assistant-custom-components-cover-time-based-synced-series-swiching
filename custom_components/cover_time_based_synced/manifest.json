@@ -6,5 +6,6 @@
   "requirements": [
     "xknx==0.9.4"
   ],
-  "codeowners": ["@kotborealis"]
+  "codeowners": ["@kotborealis"],
+  "iot_class": "local_push"
 }
