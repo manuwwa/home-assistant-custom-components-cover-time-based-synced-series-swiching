@@ -152,19 +152,27 @@ class CoverTimeBased(CoverEntity, RestoreEntity):
 
             if self._switch_open_state == "off" and self._switch_close_state == "off":
                 self._handle_my_button()
+                self._target_position = 0
             elif self._switch_open_state == "on" and self._switch_close_state == "on":
                 self._handle_my_button()
+                self._target_position = 0
                 if event.data.get("entity_id") == self._close_switch_entity_id:
                     await self.hass.services.async_call("homeassistant", "turn_off", {"entity_id": self._open_switch_entity_id}, False)
                 if event.data.get("entity_id") == self._open_switch_entity_id:
                     await self.hass.services.async_call("homeassistant", "turn_off", {"entity_id": self._close_switch_entity_id}, False)
             elif self._switch_open_state == "on" and self._switch_close_state == "off":
-                self.tc.start_travel_up()
-                self._target_position = 100
+                if self._target_position != 100 and self._target_position != 0:
+                    self.tc.start_travel(self._target_position)
+                else:
+                    self.tc.start_travel_up()
+                    self._target_position = 100
                 self.start_auto_updater()
             elif self._switch_open_state == "off" and self._switch_close_state == "on":
-                self.tc.start_travel_down()
-                self._target_position = 0
+                if self._target_position != 100 and self._target_position != 0:
+                    self.tc.start_travel(self._target_position)
+                else:
+                    self._target_position = 0
+                    self.tc.start_travel_down()
                 self.start_auto_updater()
             
 
