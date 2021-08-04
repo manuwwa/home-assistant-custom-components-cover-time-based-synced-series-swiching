@@ -335,6 +335,7 @@ class CoverTimeBased(CoverEntity, RestoreEntity):
     def stop_auto_updater(self):
         """Stop the autoupdater."""
         _LOGGER.debug(self._name + ': ' + 'stop_auto_updater')
+        self._target_position = 0
         if self._unsubscribe_auto_updater is not None:
             self._unsubscribe_auto_updater()
             self._unsubscribe_auto_updater = None
