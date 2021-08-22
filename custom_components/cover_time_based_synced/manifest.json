@@ -4,9 +4,7 @@
   "version": "2.0.0",
   "documentation": "https://github.com/kotborealis/home-assistant-custom-components-cover-time-based-synced",
   "issue_tracker": "https://github.com/kotborealis/home-assistant-custom-components-cover-time-based-synced/issues",
-  "requirements": [
-    "xknx==0.9.4"
-  ],
+  "requirements": [],
   "codeowners": ["@kotborealis"],
   "iot_class": "local_push"
 }
