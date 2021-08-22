@@ -6,7 +6,7 @@ modified to sync state of cover with the state of switches.
 ## What does `synced` mean?
 
 In the original implementations, covers are supposed to be controller only via Home Assistant.
-If you use physical switches, it will ignore them and the actual state and the state in Home Assistant will be unsyncronised.
+If you use physical switches, it will ignore them and the actual state and the state in Home Assistant will be unsynchronised.
 
 For example, you open covers to 50% in Home Assistant and then close them to 0% using physical switch.
 In Home Assistant it will still show 50%, but the actual state of covers have been changed.
