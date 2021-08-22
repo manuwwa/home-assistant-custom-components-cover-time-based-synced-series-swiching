@@ -3,6 +3,16 @@
 Cover Time Based Component for your [Home-Assistant](http://www.home-assistant.io) based on [davidramosweb's Cover Time Based Component](https://github.com/davidramosweb/home-assistant-custom-components-cover-time-based) and [nagyrobi's Cover RF Time based](https://github.com/nagyrobi/home-assistant-custom-components-cover-rf-time-based/),
 modified to sync state of cover with the state of switches.
 
+## What does `synced` mean?
+
+In the original implementations, covers are supposed to be controller only via Home Assistant.
+If you use physical switches, it will ignore them and the actual state and the state in Home Assistant will be unsyncronised.
+
+For example, you open covers to 50% in Home Assistant and then close them to 0% using physical switch.
+In Home Assistant it will still show 50%, but the actual state of covers have been changed.
+
+This component listens to events of cover switches and handles them to calculate state.
+
 ### Usage
 
 ### Example configuration.yaml entry
