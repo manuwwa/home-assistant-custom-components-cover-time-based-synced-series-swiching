@@ -1,3 +1,5 @@
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/custom-components/hacs)
+
 # Cover Time Based Component Synced version
 
 Cover Time Based Component for your [Home-Assistant](http://www.home-assistant.io) based on [davidramosweb's Cover Time Based Component](https://github.com/davidramosweb/home-assistant-custom-components-cover-time-based) and [nagyrobi's Cover RF Time based](https://github.com/nagyrobi/home-assistant-custom-components-cover-rf-time-based/),
