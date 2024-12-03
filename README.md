@@ -1,3 +1,5 @@
+### WORK IN PROGRESS PLEASE DO NOT INTALL IS NOT READY
+
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/custom-components/hacs)
 
 # Cover Time Based Component Synced version
